@@ -374,14 +374,15 @@
         .tree-container {
             background: var(--bg-secondary);
             border-radius: 6px;
-            min-height: 400px;
-            overflow: hidden;
+            min-height: 500px;
+            overflow: auto;
             position: relative;
         }
 
         #tree-svg {
             width: 100%;
-            height: 500px;
+            min-height: 500px;
+            display: block;
         }
 
         .tree-legend {
@@ -842,25 +843,22 @@
         // Initialize D3 Tree
         function initTree() {
             const container = document.getElementById('treeContainer');
-            const width = container.clientWidth;
-            const height = 500;
+            const width = container.clientWidth || 800;
 
             d3.select('#tree-svg').selectAll('*').remove();
 
             svg = d3.select('#tree-svg')
-                .attr('width', width)
-                .attr('height', height);
+                .attr('width', width);
 
             zoom = d3.zoom()
-                .scaleExtent([0.3, 3])
+                .scaleExtent([0.2, 4])
                 .on('zoom', (event) => {
                     g.attr('transform', event.transform);
                 });
 
             svg.call(zoom);
 
-            g = svg.append('g')
-                .attr('transform', `translate(${width / 2}, 50)`);
+            g = svg.append('g');
 
             treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
             nodeMap.clear();
@@ -868,68 +866,143 @@
 
         function updateTree() {
             if (treeNodes.length === 0) return;
+            if (!treeDataHierarchy) buildHierarchy();
+            if (!treeDataHierarchy) return;
 
             const container = document.getElementById('treeContainer');
-            const width = container.clientWidth;
-            const height = 500;
+            const containerWidth = container.clientWidth || 800;
 
             buildHierarchy();
-
-            const treeLayout = d3.tree()
-                .size([width - 100, height - 150])
-                .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
+            if (!treeDataHierarchy) return;
 
             root = d3.hierarchy(treeDataHierarchy);
+            
+            // Calculate dynamic dimensions based on tree size
+            const nodeCount = root.descendants().length;
+            const maxDepth = d3.max(root.descendants(), d => d.depth) || 0;
+            const nodesPerLevel = {};
+            root.descendants().forEach(d => {
+                nodesPerLevel[d.depth] = (nodesPerLevel[d.depth] || 0) + 1;
+            });
+            const maxNodesInLevel = Math.max(...Object.values(nodesPerLevel), 1);
+
+            // Dynamic sizing
+            const nodeSpacing = 120; // Horizontal space per node
+            const levelHeight = 100; // Vertical space per level
+            const padding = 100;
+
+            const treeWidth = Math.max(containerWidth - padding, maxNodesInLevel * nodeSpacing);
+            const treeHeight = Math.max(400, (maxDepth + 1) * levelHeight + padding);
+
+            // Update SVG size
+            svg.attr('width', Math.max(containerWidth, treeWidth + padding))
+               .attr('height', treeHeight);
+
+            // Create tree layout
+            const treeLayout = d3.tree()
+                .size([treeWidth, treeHeight - padding])
+                .separation((a, b) => {
+                    return a.parent === b.parent ? 1.2 : 1.5;
+                });
+
             treeLayout(root);
 
+            // Clear and redraw
             g.selectAll('*').remove();
 
+            // Center the tree
+            const xOffset = padding / 2;
+            const yOffset = 50;
+
+            // Draw links
             g.selectAll('.link')
                 .data(root.links())
                 .enter()
                 .append('path')
                 .attr('class', 'link')
                 .attr('d', d3.linkVertical()
-                    .x(d => d.x - width / 2 + 50)
-                    .y(d => d.y));
+                    .x(d => d.x + xOffset)
+                    .y(d => d.y + yOffset));
 
+            // Draw nodes
             const nodes = g.selectAll('.node')
                 .data(root.descendants())
                 .enter()
                 .append('g')
                 .attr('class', 'node')
-                .attr('transform', d => `translate(${d.x - width / 2 + 50}, ${d.y})`);
+                .attr('transform', d => `translate(${d.x + xOffset}, ${d.y + yOffset})`);
 
+            // Node circles
             nodes.append('circle')
-                .attr('r', 16)
+                .attr('r', 18)
                 .attr('fill', d => d.data.isValid ? '#ffffff' : 'transparent')
                 .attr('stroke', d => d.data.isValid ? '#ffffff' : '#555555')
                 .attr('stroke-width', 2)
                 .on('mouseover', showTooltip)
                 .on('mouseout', hideTooltip);
 
+            // Node text (V/X)
             nodes.append('text')
-                .attr('dy', 4)
+                .attr('dy', 5)
                 .attr('text-anchor', 'middle')
                 .attr('fill', d => d.data.isValid ? '#0a0a0a' : '#555555')
                 .attr('font-weight', '600')
-                .attr('font-size', '10px')
+                .attr('font-size', '11px')
                 .text(d => d.data.isValid ? 'V' : 'X');
 
+            // Labels below nodes
             nodes.append('text')
-                .attr('dy', 35)
+                .attr('dy', 38)
                 .attr('text-anchor', 'middle')
+                .attr('fill', '#888888')
+                .attr('font-size', '10px')
                 .text(d => {
                     const name = d.data.name;
-                    return name.length > 15 ? '...' + name.slice(-12) : name;
+                    return name.length > 18 ? '...' + name.slice(-15) : name;
                 });
 
+            // Depth labels
             nodes.append('text')
-                .attr('dy', 50)
+                .attr('dy', 52)
                 .attr('text-anchor', 'middle')
                 .attr('fill', '#555555')
-                .attr('font-size', '10px')
-                .text(d => `depth ${d.data.depth}`);
+                .attr('font-size', '9px')
+                .text(d => `d:${d.data.depth}`);
+
+            // Auto-fit on first render or when nodes change significantly
+            if (nodeCount <= 20) {
+                fitToScreen();
+            }
+        }
+
+        function fitToScreen() {
+            if (!root || !svg || !g) return;
+            
+            const container = document.getElementById('treeContainer');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight || 500;
+            
+            // Get bounds of the tree
+            const bounds = g.node().getBBox();
+            if (!bounds.width || !bounds.height) return;
+            
+            const fullWidth = bounds.width + 100;
+            const fullHeight = bounds.height + 100;
+            
+            const scale = Math.min(
+                containerWidth / fullWidth,
+                containerHeight / fullHeight,
+                1.5 // Max scale
+            ) * 0.9; // 90% to add some padding
+            
+            const translateX = (containerWidth - bounds.width * scale) / 2 - bounds.x * scale;
+            const translateY = 30;
+            
+            svg.transition()
+                .duration(300)
+                .call(zoom.transform, d3.zoomIdentity
+                    .translate(translateX, translateY)
+                    .scale(scale));
         }
 
         function buildHierarchy() {
@@ -1010,8 +1083,7 @@
         }
 
         function resetZoom() {
-            const width = document.getElementById('treeContainer').clientWidth;
-            svg.transition().call(zoom.transform, d3.zoomIdentity.translate(width / 2, 50));
+            fitToScreen();
         }
 
         // Update list view
