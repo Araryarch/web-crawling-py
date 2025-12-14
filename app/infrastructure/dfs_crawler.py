@@ -89,7 +89,30 @@ class DFSWebCrawler(ICrawler):
             
             is_valid = html is not None
             
-            # Emit page event
+            # Add new links to stack first (before emitting event)
+            new_links_added = 0
+            if is_valid:
+                links = self.link_extractor.extract_links(html, current_url)
+                
+                for link in links:
+                    normalized_link = self.url_parser.normalize_url(link)
+                    
+                    if not self.url_parser.is_valid_url(normalized_link, domain):
+                        continue
+                    
+                    if normalized_link in visited_urls:
+                        continue
+                    
+                    stack.append((normalized_link, current_depth + 1, current_url))
+                    new_links_added += 1
+            
+            # Calculate actual remaining queue (filter already visited/processed)
+            remaining_queue = sum(
+                1 for url, depth, _ in stack 
+                if url not in visited_urls and depth <= self.config.max_depth
+            )
+            
+            # Emit page event with accurate queue size
             yield {
                 'type': 'page',
                 'route': route,
@@ -97,7 +120,7 @@ class DFSWebCrawler(ICrawler):
                 'depth': current_depth,
                 'is_valid': is_valid,
                 'pages_crawled': pages_crawled,
-                'queue_size': len(stack),
+                'queue_size': remaining_queue,
                 'progress': min(100, int((pages_crawled / self.config.max_pages) * 100))
             }
             
@@ -120,20 +143,6 @@ class DFSWebCrawler(ICrawler):
                 valid_routes_set.add(route)
             else:
                 invalid_routes_set.add(route)
-                continue
-            
-            links = self.link_extractor.extract_links(html, current_url)
-            
-            for link in links:
-                normalized_link = self.url_parser.normalize_url(link)
-                
-                if not self.url_parser.is_valid_url(normalized_link, domain):
-                    continue
-                
-                if normalized_link in visited_urls:
-                    continue
-                
-                stack.append((normalized_link, current_depth + 1, current_url))
             
             time.sleep(self.config.delay)
         
