@@ -929,9 +929,11 @@
                         <button onclick="resetZoom()">⟲</button>
                     </div>
                     <svg id="tree-svg"></svg>
-                    <div class="d3-tooltip" id="tooltip"></div>
                 </div>
             </div>
+
+            <!-- Tooltip (outside container to avoid overflow clipping) -->
+            <div class="d3-tooltip" id="tooltip"></div>
 
             <!-- List View -->
             <div id="listView" class="view-content">
@@ -1142,8 +1144,13 @@
                 .attr('fill', d => d.data.isValid ? '#ffffff' : 'transparent')
                 .attr('stroke', d => d.data.isValid ? '#ffffff' : '#555555')
                 .attr('stroke-width', 2)
-                .on('mouseover', showTooltip)
-                .on('mouseout', hideTooltip);
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    showTooltip(event, d);
+                })
+                .on('mouseout', function() {
+                    hideTooltip();
+                });
 
             // Node text (V/X)
             nodes.append('text')
@@ -1340,17 +1347,24 @@
             const tooltip = document.getElementById('tooltip');
             const fullUrl = d.data.url || d.data.name;
             
+            // Set content first to calculate width
             tooltip.innerHTML = `<span class="url">${fullUrl}</span>`;
-            tooltip.style.opacity = 1;
+            tooltip.style.display = 'block';
+            tooltip.style.opacity = 0;
             
-            // Position tooltip above the node (centered)
-            const tooltipWidth = tooltip.offsetWidth || 150;
+            // Get tooltip dimensions after content is set
+            const rect = tooltip.getBoundingClientRect();
+            const tooltipWidth = rect.width || 150;
+            
+            // Position above cursor, centered
             tooltip.style.left = (event.pageX - tooltipWidth / 2) + 'px';
-            tooltip.style.top = (event.pageY - 45) + 'px';
+            tooltip.style.top = (event.pageY - 50) + 'px';
+            tooltip.style.opacity = 1;
         }
 
         function hideTooltip() {
-            document.getElementById('tooltip').style.opacity = 0;
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.opacity = 0;
         }
 
         function zoomIn() {
