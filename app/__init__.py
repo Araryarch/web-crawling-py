@@ -14,8 +14,14 @@ def create_app(config_class=Config):
         crawl_config = CrawlConfig(
             timeout=app.config['CRAWLER_TIMEOUT'],
             max_pages=app.config['CRAWLER_MAX_PAGES'],
+            max_depth=app.config['CRAWLER_MAX_DEPTH'],
             delay=app.config['CRAWLER_DELAY'],
-            user_agent=app.config['CRAWLER_USER_AGENT']
+            user_agent=app.config['CRAWLER_USER_AGENT'],
+            verify_ssl=app.config['CRAWLER_VERIFY_SSL'],
+            retry_count=app.config['CRAWLER_RETRY_COUNT'],
+            retry_delay=app.config['CRAWLER_RETRY_DELAY'],
+            follow_redirects=app.config['CRAWLER_FOLLOW_REDIRECTS'],
+            rotate_user_agent=app.config['CRAWLER_ROTATE_USER_AGENT']
         )
         init_container(crawl_config)
     
