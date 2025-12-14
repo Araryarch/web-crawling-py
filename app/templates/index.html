@@ -233,13 +233,83 @@
             transition: width 0.3s ease;
         }
 
-        .current-page {
+        /* Hacker Terminal */
+        .terminal {
+            background: #0d0d0d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        }
+
+        .terminal-header {
+            background: #1a1a1a;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dots .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .terminal-dots .dot:nth-child(1) { background: #ff5f56; }
+        .terminal-dots .dot:nth-child(2) { background: #ffbd2e; }
+        .terminal-dots .dot:nth-child(3) { background: #27ca40; }
+
+        .terminal-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-body {
             padding: 1rem;
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 0.85rem;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            display: flex;
+            gap: 0.75rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .terminal-prompt {
+            color: #27ca40;
+            font-weight: bold;
+        }
+
+        .terminal-text {
             color: var(--text-secondary);
+        }
+
+        .terminal-text.success { color: #27ca40; }
+        .terminal-text.error { color: #ff5f56; }
+        .terminal-text.warning { color: #ffbd2e; }
+        .terminal-text.info { color: #6bb3f8; }
+        .terminal-text.highlight { color: #fff; }
+
+        .terminal-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            margin-left: auto;
         }
 
         .results-section {
@@ -248,9 +318,83 @@
             gap: 1.5rem;
         }
 
+        /* Responsive Design */
         @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+
+            header {
+                margin-bottom: 2rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .input-group .btn {
+                width: 100%;
+            }
+
+            .options {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .progress-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .progress-stats {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .stat {
+                text-align: center;
+            }
+
+            .stat-value {
+                font-size: 1.2rem;
+            }
+
             .results-section {
                 grid-template-columns: 1fr;
+            }
+
+            .terminal-body {
+                height: 150px;
+                font-size: 0.7rem;
+            }
+
+            .view-tabs {
+                overflow-x: auto;
+            }
+
+            .tree-container {
+                min-height: 400px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .options {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-stats {
+                gap: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1rem;
+            }
+
+            .stat-label {
+                font-size: 0.65rem;
             }
         }
 
@@ -513,7 +657,7 @@
 
         .list-header {
             display: grid;
-            grid-template-columns: 40px 1fr 80px 80px 100px;
+            grid-template-columns: 40px 1fr 80px 100px;
             padding: 1rem 1.5rem;
             font-size: 0.75rem;
             font-weight: 600;
@@ -529,7 +673,7 @@
 
         .list-row {
             display: grid;
-            grid-template-columns: 40px 1fr 80px 80px 100px;
+            grid-template-columns: 40px 1fr 80px 100px;
             padding: 1rem 1.5rem;
             font-size: 0.85rem;
             border-bottom: 1px solid var(--border-color);
@@ -564,7 +708,7 @@
             white-space: nowrap;
         }
 
-        .list-depth, .list-queue {
+        .list-depth {
             color: var(--text-muted);
             text-align: center;
         }
@@ -598,7 +742,7 @@
                 grid-template-columns: repeat(2, 1fr);
             }
             .list-header, .list-row {
-                grid-template-columns: 30px 1fr 60px 60px;
+                grid-template-columns: 30px 1fr 50px;
             }
             .list-time {
                 display: none;
@@ -722,17 +866,28 @@
                         <div id="invalidCount" class="stat-value">0</div>
                         <div class="stat-label">Invalid</div>
                     </div>
-                    <div class="stat">
-                        <div id="queueCount" class="stat-value">0</div>
-                        <div class="stat-label">Queue</div>
-                    </div>
                 </div>
             </div>
             <div class="progress-bar-container">
                 <div id="progressBar" class="progress-bar"></div>
             </div>
-            <div id="currentPage" class="current-page">
-                <span id="currentUrl">Waiting...</span>
+            
+            <!-- Hacker Terminal -->
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <span class="terminal-title">crawler.sh</span>
+                </div>
+                <div class="terminal-body" id="terminalLog">
+                    <div class="terminal-line">
+                        <span class="terminal-prompt">$</span>
+                        <span class="terminal-text">Waiting for input...</span>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -778,7 +933,6 @@
                         <span>#</span>
                         <span>Route</span>
                         <span>Depth</span>
-                        <span>Status</span>
                         <span>Time</span>
                     </div>
                     <div id="listBody">
@@ -845,6 +999,27 @@
         let svg, g, zoom, tree, root;
         let treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
         let nodeMap = new Map();
+
+        // Terminal log function
+        function terminalLog(message, type = 'default') {
+            const terminal = document.getElementById('terminalLog');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.innerHTML = `
+                <span class="terminal-prompt">$</span>
+                <span class="terminal-text ${type}">${message}</span>
+                <span class="terminal-time">${time}</span>
+            `;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            const terminal = document.getElementById('terminalLog');
+            terminal.innerHTML = '';
+        }
 
         // Switch between views
         function switchView(view) {
@@ -1197,7 +1372,6 @@
                 <span class="list-status ${event.is_valid ? 'valid' : 'invalid'}">${event.is_valid ? 'V' : 'X'}</span>
                 <span class="list-route" title="${event.url}">${event.route}</span>
                 <span class="list-depth">${event.depth}</span>
-                <span class="list-queue">${event.queue_size}</span>
                 <span class="list-time">${elapsed}s</span>
             `;
             listBody.appendChild(row);
@@ -1233,13 +1407,18 @@
             document.getElementById('crawledCount').textContent = '0';
             document.getElementById('validCount').textContent = '0';
             document.getElementById('invalidCount').textContent = '0';
-            document.getElementById('queueCount').textContent = '0';
+
             document.getElementById('statusText').className = 'status-text running';
             document.getElementById('statusText').textContent = 'Crawling';
 
             // Reset pause state
             isPaused = false;
             eventBuffer = [];
+
+            // Terminal initialization
+            clearTerminal();
+            terminalLog('Initializing DFS Web Crawler v2.1...', 'info');
+            terminalLog(`Target: ${url}`, 'highlight');
 
             initTree();
 
@@ -1318,6 +1497,7 @@
             }
             isPaused = false;
             eventBuffer = [];
+            terminalLog('Crawl aborted by user.', 'error');
         }
 
         function pauseCrawl() {
@@ -1326,6 +1506,7 @@
             document.getElementById('resumeBtn').style.display = 'inline-block';
             document.getElementById('statusText').textContent = 'Paused';
             document.getElementById('statusText').className = 'status-text';
+            terminalLog('Crawl paused. Events buffering...', 'warning');
         }
 
         function resumeCrawl() {
@@ -1334,6 +1515,7 @@
             document.getElementById('resumeBtn').style.display = 'none';
             document.getElementById('statusText').textContent = 'Crawling';
             document.getElementById('statusText').className = 'status-text running';
+            terminalLog(`Resuming crawl. Processing ${eventBuffer.length} buffered events...`, 'info');
 
             // Process buffered events
             const bufferedEvents = [...eventBuffer];
@@ -1347,14 +1529,21 @@
         function handleEvent(event) {
             switch (event.type) {
                 case 'start':
-                    document.getElementById('currentUrl').textContent = event.url;
+                    terminalLog(`Connecting to ${event.url}...`, 'info');
+                    terminalLog(`Config: max_pages=${event.max_pages}, max_depth=${event.max_depth}`, 'warning');
+                    terminalLog('Starting DFS crawl...', 'success');
                     break;
 
                 case 'page':
                     document.getElementById('progressBar').style.width = `${event.progress}%`;
                     document.getElementById('crawledCount').textContent = event.pages_crawled;
-                    document.getElementById('queueCount').textContent = event.queue_size;
-                    document.getElementById('currentUrl').textContent = event.route;
+
+                    // Terminal log for each page
+                    if (event.is_valid) {
+                        terminalLog(`[${event.pages_crawled}] FOUND ${event.route} (depth:${event.depth})`, 'success');
+                    } else {
+                        terminalLog(`[${event.pages_crawled}] ERROR ${event.route} (unreachable)`, 'error');
+                    }
 
                     treeNodes.push(event);
                     document.getElementById('nodeCount').textContent = `${treeNodes.length} nodes`;
@@ -1375,6 +1564,12 @@
                     break;
 
                 case 'complete':
+                    const elapsed = ((Date.now() - crawlStartTime) / 1000).toFixed(2);
+                    terminalLog('─'.repeat(40), 'default');
+                    terminalLog(`Crawl completed in ${elapsed}s`, 'success');
+                    terminalLog(`Total: ${event.result.pages_crawled} pages crawled`, 'info');
+                    terminalLog(`Valid: ${event.result.found_routes.length} | Invalid: ${event.result.invalid_routes.length}`, 'highlight');
+                    terminalLog('Process terminated.', 'warning');
                     handleComplete(event.result);
                     break;
             }
