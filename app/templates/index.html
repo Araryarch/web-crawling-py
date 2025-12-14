@@ -596,27 +596,34 @@
 
         .d3-tooltip {
             position: absolute;
-            background: var(--bg-primary);
+            background: #1a1a1a;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px 14px;
-            font-size: 12px;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 11px;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s ease;
             z-index: 1000;
-            max-width: 300px;
+            max-width: 350px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .d3-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1a1a1a;
         }
 
         .d3-tooltip .url {
-            font-family: 'SF Mono', monospace;
-            color: var(--text-secondary);
-            word-break: break-all;
-        }
-
-        .d3-tooltip .status {
-            margin-top: 6px;
-            color: var(--text-muted);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: #6bb3f8;
+            font-size: 11px;
         }
 
         .tree-controls {
@@ -1331,13 +1338,15 @@
 
         function showTooltip(event, d) {
             const tooltip = document.getElementById('tooltip');
-            tooltip.innerHTML = `
-                <div class="url">${d.data.url || d.data.name}</div>
-                <div class="status">${d.data.isValid ? 'Valid' : 'Invalid'} — Depth ${d.data.depth}</div>
-            `;
+            const fullUrl = d.data.url || d.data.name;
+            
+            tooltip.innerHTML = `<span class="url">${fullUrl}</span>`;
             tooltip.style.opacity = 1;
-            tooltip.style.left = (event.pageX + 10) + 'px';
-            tooltip.style.top = (event.pageY - 10) + 'px';
+            
+            // Position tooltip above the node (centered)
+            const tooltipWidth = tooltip.offsetWidth || 150;
+            tooltip.style.left = (event.pageX - tooltipWidth / 2) + 'px';
+            tooltip.style.top = (event.pageY - 45) + 'px';
         }
 
         function hideTooltip() {
