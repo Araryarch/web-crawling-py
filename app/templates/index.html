@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DFS Web Crawler</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0a;
@@ -15,10 +16,7 @@
             --text-primary: #ffffff;
             --text-secondary: #888888;
             --text-muted: #555555;
-            --success: #888888;
-            --error: #666666;
             --border-color: #2a2a2a;
-            --border-light: #333333;
         }
 
         * {
@@ -55,7 +53,6 @@
         .subtitle {
             color: var(--text-secondary);
             font-size: 0.95rem;
-            font-weight: 400;
         }
 
         .input-section {
@@ -81,7 +78,6 @@
             border-radius: 6px;
             color: var(--text-primary);
             font-family: inherit;
-            transition: border-color 0.2s ease;
         }
 
         .url-input:focus {
@@ -124,10 +120,6 @@
             border: 1px solid var(--border-color);
         }
 
-        .btn-secondary:hover {
-            border-color: var(--text-secondary);
-        }
-
         .options {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -155,7 +147,6 @@
             border-radius: 6px;
             color: var(--text-primary);
             font-family: inherit;
-            font-size: 0.9rem;
         }
 
         .option input:focus {
@@ -218,7 +209,6 @@
         .stat-value {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--text-primary);
         }
 
         .stat-label {
@@ -321,6 +311,8 @@
 
         .route-path {
             color: var(--text-secondary);
+            flex: 1;
+            margin: 0 1rem;
         }
 
         .route-depth {
@@ -336,139 +328,20 @@
         .tree-container {
             background: var(--bg-secondary);
             border-radius: 6px;
-            padding: 2rem;
-            min-height: 300px;
-            overflow: auto;
-        }
-
-        .tree-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3rem;
-            padding: 1rem;
-        }
-
-        .tree-level {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .tree-node {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-        }
-
-        .tree-node:hover {
-            opacity: 0.7;
-        }
-
-        .node-circle {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            border: 2px solid;
-        }
-
-        .node-circle.valid {
-            background: var(--text-primary);
-            border-color: var(--text-primary);
-            color: var(--bg-primary);
-        }
-
-        .node-circle.invalid {
-            background: transparent;
-            border-color: var(--text-muted);
-            color: var(--text-muted);
-        }
-
-        .node-circle.crawling {
-            background: transparent;
-            border-color: var(--text-primary);
-            color: var(--text-primary);
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
-
-        .node-label {
-            margin-top: 0.75rem;
-            font-size: 0.75rem;
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            color: var(--text-secondary);
-            max-width: 100px;
-            text-align: center;
-            white-space: nowrap;
+            min-height: 400px;
             overflow: hidden;
-            text-overflow: ellipsis;
+            position: relative;
         }
 
-        .node-depth {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-
-        .node-tooltip {
-            position: absolute;
-            bottom: calc(100% + 10px);
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            z-index: 100;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease;
-        }
-
-        .tree-node:hover .node-tooltip {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .tooltip-url {
-            color: var(--text-secondary);
-            font-family: 'SF Mono', 'Fira Code', monospace;
-        }
-
-        .tooltip-status {
-            margin-top: 0.5rem;
-            color: var(--text-muted);
-        }
-
-        .tree-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 200px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
+        #tree-svg {
+            width: 100%;
+            height: 500px;
         }
 
         .tree-legend {
             display: flex;
             gap: 2rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
             justify-content: center;
@@ -497,6 +370,64 @@
         .legend-circle.invalid {
             background: transparent;
             border-color: var(--text-muted);
+        }
+
+        .tree-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* D3 Tree Styles */
+        .node circle {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .node circle:hover {
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 11px;
+            fill: var(--text-secondary);
+        }
+
+        .link {
+            fill: none;
+            stroke: var(--border-color);
+            stroke-width: 1.5px;
+        }
+
+        /* Tooltip */
+        .d3-tooltip {
+            position: absolute;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .d3-tooltip .url {
+            font-family: 'SF Mono', monospace;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .d3-tooltip .status {
+            margin-top: 6px;
+            color: var(--text-muted);
         }
 
         /* Validation Card */
@@ -559,8 +490,33 @@
             border-radius: 3px;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-muted);
+        /* Zoom controls */
+        .tree-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .tree-controls button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tree-controls button:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
         }
     </style>
 </head>
@@ -649,9 +605,13 @@
                 </div>
             </div>
             <div id="treeContainer" class="tree-container">
-                <div class="tree-empty">
-                    <p>Start crawling to see the tree</p>
+                <div class="tree-controls">
+                    <button onclick="zoomIn()">+</button>
+                    <button onclick="zoomOut()">−</button>
+                    <button onclick="resetZoom()">⟲</button>
                 </div>
+                <svg id="tree-svg"></svg>
+                <div class="d3-tooltip" id="tooltip"></div>
             </div>
         </section>
 
@@ -704,7 +664,203 @@
         let validRoutes = [];
         let invalidRoutes = [];
         let treeNodes = [];
-        let treeData = {};
+        
+        // D3 Tree variables
+        let svg, g, zoom, tree, root;
+        let treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
+        let nodeMap = new Map();
+
+        // Initialize D3 Tree
+        function initTree() {
+            const container = document.getElementById('treeContainer');
+            const width = container.clientWidth;
+            const height = 500;
+
+            // Clear previous
+            d3.select('#tree-svg').selectAll('*').remove();
+
+            svg = d3.select('#tree-svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            // Create zoom behavior
+            zoom = d3.zoom()
+                .scaleExtent([0.3, 3])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+
+            g = svg.append('g')
+                .attr('transform', `translate(${width / 2}, 50)`);
+
+            // Reset tree data
+            treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
+            nodeMap.clear();
+        }
+
+        function updateTree() {
+            if (treeNodes.length === 0) return;
+
+            const container = document.getElementById('treeContainer');
+            const width = container.clientWidth;
+            const height = 500;
+
+            // Build hierarchy from flat nodes
+            buildHierarchy();
+
+            // Create tree layout
+            const treeLayout = d3.tree()
+                .size([width - 100, height - 150])
+                .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
+
+            root = d3.hierarchy(treeDataHierarchy);
+            treeLayout(root);
+
+            // Clear and redraw
+            g.selectAll('*').remove();
+
+            // Draw links
+            const links = g.selectAll('.link')
+                .data(root.links())
+                .enter()
+                .append('path')
+                .attr('class', 'link')
+                .attr('d', d3.linkVertical()
+                    .x(d => d.x - width / 2 + 50)
+                    .y(d => d.y));
+
+            // Draw nodes
+            const nodes = g.selectAll('.node')
+                .data(root.descendants())
+                .enter()
+                .append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${d.x - width / 2 + 50}, ${d.y})`);
+
+            // Node circles
+            nodes.append('circle')
+                .attr('r', 16)
+                .attr('fill', d => d.data.isValid ? '#ffffff' : 'transparent')
+                .attr('stroke', d => d.data.isValid ? '#ffffff' : '#555555')
+                .attr('stroke-width', 2)
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip);
+
+            // Node text (inside circle)
+            nodes.append('text')
+                .attr('dy', 4)
+                .attr('text-anchor', 'middle')
+                .attr('fill', d => d.data.isValid ? '#0a0a0a' : '#555555')
+                .attr('font-weight', '600')
+                .attr('font-size', '10px')
+                .text(d => d.data.isValid ? 'V' : 'X');
+
+            // Labels below nodes
+            nodes.append('text')
+                .attr('dy', 35)
+                .attr('text-anchor', 'middle')
+                .text(d => {
+                    const name = d.data.name;
+                    return name.length > 15 ? '...' + name.slice(-12) : name;
+                });
+
+            // Depth labels
+            nodes.append('text')
+                .attr('dy', 50)
+                .attr('text-anchor', 'middle')
+                .attr('fill', '#555555')
+                .attr('font-size', '10px')
+                .text(d => `depth ${d.data.depth}`);
+        }
+
+        function buildHierarchy() {
+            // Reset
+            treeDataHierarchy = null;
+            nodeMap.clear();
+
+            // Sort by depth
+            const sortedNodes = [...treeNodes].sort((a, b) => a.depth - b.depth);
+
+            for (const node of sortedNodes) {
+                const treeNode = {
+                    name: node.route,
+                    url: node.url,
+                    isValid: node.is_valid,
+                    depth: node.depth,
+                    children: []
+                };
+
+                nodeMap.set(node.route, treeNode);
+
+                if (node.depth === 0) {
+                    treeDataHierarchy = treeNode;
+                } else {
+                    // Find parent (closest match by path)
+                    const parentPath = findParentPath(node.route);
+                    const parent = nodeMap.get(parentPath);
+                    if (parent) {
+                        parent.children.push(treeNode);
+                    } else if (treeDataHierarchy) {
+                        // Fallback: attach to root
+                        treeDataHierarchy.children.push(treeNode);
+                    }
+                }
+            }
+
+            if (!treeDataHierarchy && sortedNodes.length > 0) {
+                const first = sortedNodes[0];
+                treeDataHierarchy = {
+                    name: first.route,
+                    url: first.url,
+                    isValid: first.is_valid,
+                    depth: first.depth,
+                    children: []
+                };
+            }
+        }
+
+        function findParentPath(route) {
+            // Try to find parent by removing last segment
+            const parts = route.split('/').filter(p => p);
+            while (parts.length > 0) {
+                parts.pop();
+                const parentPath = '/' + parts.join('/');
+                if (nodeMap.has(parentPath) || nodeMap.has(parentPath + '/')) {
+                    return nodeMap.has(parentPath) ? parentPath : parentPath + '/';
+                }
+            }
+            return '/';
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="url">${d.data.url || d.data.name}</div>
+                <div class="status">${d.data.isValid ? 'Valid' : 'Invalid'} — Depth ${d.data.depth}</div>
+            `;
+            tooltip.style.opacity = 1;
+            tooltip.style.left = (event.pageX + 10) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.opacity = 0;
+        }
+
+        function zoomIn() {
+            svg.transition().call(zoom.scaleBy, 1.3);
+        }
+
+        function zoomOut() {
+            svg.transition().call(zoom.scaleBy, 0.7);
+        }
+
+        function resetZoom() {
+            const width = document.getElementById('treeContainer').clientWidth;
+            svg.transition().call(zoom.transform, d3.zoomIdentity.translate(width / 2, 50));
+        }
 
         async function startCrawl() {
             const url = document.getElementById('urlInput').value.trim();
@@ -716,10 +872,8 @@
             validRoutes = [];
             invalidRoutes = [];
             treeNodes = [];
-            treeData = {};
             document.getElementById('validList').innerHTML = '';
             document.getElementById('invalidList').innerHTML = '';
-            resetTree();
             
             document.getElementById('progressSection').classList.add('active');
             document.getElementById('treeCard').classList.add('active');
@@ -737,6 +891,9 @@
             document.getElementById('queueCount').textContent = '0';
             document.getElementById('statusText').className = 'status-text running';
             document.getElementById('statusText').textContent = 'Crawling';
+
+            // Initialize tree
+            initTree();
 
             abortController = new AbortController();
 
@@ -801,7 +958,10 @@
                     document.getElementById('queueCount').textContent = event.queue_size;
                     document.getElementById('currentUrl').textContent = event.route;
 
-                    addTreeNode(event);
+                    // Add to tree
+                    treeNodes.push(event);
+                    document.getElementById('nodeCount').textContent = `${treeNodes.length} nodes`;
+                    updateTree();
 
                     if (event.is_valid) {
                         validRoutes.push(event);
@@ -818,65 +978,6 @@
                     handleComplete(event.result);
                     break;
             }
-        }
-
-        function resetTree() {
-            document.getElementById('treeContainer').innerHTML = `
-                <div class="tree-empty">
-                    <p>Start crawling to see the tree</p>
-                </div>
-            `;
-            document.getElementById('nodeCount').textContent = '0 nodes';
-        }
-
-        function addTreeNode(event) {
-            treeNodes.push(event);
-            document.getElementById('nodeCount').textContent = `${treeNodes.length} nodes`;
-            
-            if (!treeData[event.depth]) {
-                treeData[event.depth] = [];
-            }
-            treeData[event.depth].push(event);
-            
-            renderTree();
-        }
-
-        function renderTree() {
-            const container = document.getElementById('treeContainer');
-            const maxDepth = Math.max(...Object.keys(treeData).map(Number));
-            
-            let html = '<div class="tree-wrapper">';
-            
-            for (let depth = 0; depth <= maxDepth; depth++) {
-                const nodesAtDepth = treeData[depth] || [];
-                
-                html += '<div class="tree-level">';
-                
-                for (const node of nodesAtDepth) {
-                    const statusClass = node.is_valid ? 'valid' : 'invalid';
-                    const symbol = node.is_valid ? 'V' : 'X';
-                    const shortRoute = node.route.length > 12 ? '...' + node.route.slice(-9) : node.route;
-                    
-                    html += `
-                        <div class="tree-node" data-route="${node.route}">
-                            <div class="node-tooltip">
-                                <div class="tooltip-url">${node.url}</div>
-                                <div class="tooltip-status">
-                                    ${node.is_valid ? 'Valid' : 'Invalid'} — Depth ${node.depth}
-                                </div>
-                            </div>
-                            <div class="node-circle ${statusClass}">${symbol}</div>
-                            <div class="node-label">${shortRoute}</div>
-                            <div class="node-depth">${node.depth}</div>
-                        </div>
-                    `;
-                }
-                
-                html += '</div>';
-            }
-            
-            html += '</div>';
-            container.innerHTML = html;
         }
 
         function addRouteItem(listId, event, isValid) {
@@ -912,6 +1013,14 @@
 
             document.getElementById('validationStatus').textContent = validation.is_valid ? 'Valid' : 'Invalid';
         }
+
+        // Initialize on load
+        window.addEventListener('resize', () => {
+            if (treeNodes.length > 0) {
+                initTree();
+                updateTree();
+            }
+        });
     </script>
 </body>
 </html>
