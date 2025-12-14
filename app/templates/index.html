@@ -320,9 +320,55 @@
             color: var(--text-muted);
         }
 
-        /* Tree Section */
+        /* Tree/List Section */
         .tree-card {
             grid-column: 1 / -1;
+        }
+
+        /* Tabs */
+        .view-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .view-tab {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .view-tab:hover {
+            color: var(--text-secondary);
+        }
+
+        .view-tab.active {
+            color: var(--text-primary);
+        }
+
+        .view-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--text-primary);
+        }
+
+        .view-content {
+            display: none;
+        }
+
+        .view-content.active {
+            display: block;
         }
 
         .tree-container {
@@ -342,8 +388,6 @@
             display: flex;
             gap: 2rem;
             margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
             justify-content: center;
         }
 
@@ -404,7 +448,6 @@
             stroke-width: 1.5px;
         }
 
-        /* Tooltip */
         .d3-tooltip {
             position: absolute;
             background: var(--bg-primary);
@@ -430,6 +473,112 @@
             color: var(--text-muted);
         }
 
+        .tree-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .tree-controls button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tree-controls button:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        /* List View */
+        .list-container {
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .list-header {
+            display: grid;
+            grid-template-columns: 40px 1fr 80px 80px 100px;
+            padding: 1rem 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            z-index: 5;
+        }
+
+        .list-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 80px 80px 100px;
+            padding: 1rem 1.5rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .list-row:hover {
+            background: var(--bg-hover);
+        }
+
+        .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .list-status {
+            font-weight: 600;
+        }
+
+        .list-status.valid {
+            color: var(--text-primary);
+        }
+
+        .list-status.invalid {
+            color: var(--text-muted);
+        }
+
+        .list-route {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .list-depth, .list-queue {
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .list-time {
+            color: var(--text-muted);
+            text-align: right;
+            font-size: 0.8rem;
+        }
+
+        .list-empty {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
         /* Validation Card */
         .validation-card {
             grid-column: 1 / -1;
@@ -445,6 +594,12 @@
         @media (max-width: 600px) {
             .validation-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            .list-header, .list-row {
+                grid-template-columns: 30px 1fr 60px 60px;
+            }
+            .list-time {
+                display: none;
             }
         }
 
@@ -488,35 +643,6 @@
         ::-webkit-scrollbar-thumb {
             background: var(--border-color);
             border-radius: 3px;
-        }
-
-        /* Zoom controls */
-        .tree-controls {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            gap: 0.5rem;
-            z-index: 10;
-        }
-
-        .tree-controls button {
-            width: 32px;
-            height: 32px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .tree-controls button:hover {
-            border-color: var(--text-secondary);
-            color: var(--text-primary);
         }
     </style>
 </head>
@@ -591,27 +717,53 @@
 
         <section id="treeCard" class="result-card tree-card">
             <div class="card-header">
-                <div class="card-title">Tree View</div>
+                <div class="card-title">Crawl Results</div>
                 <span id="nodeCount" class="card-count">0 nodes</span>
             </div>
-            <div class="tree-legend">
-                <div class="legend-item">
-                    <div class="legend-circle valid"></div>
-                    <span>Valid</span>
+            
+            <!-- Tabs -->
+            <div class="view-tabs">
+                <button class="view-tab active" onclick="switchView('tree')">Tree View</button>
+                <button class="view-tab" onclick="switchView('list')">List View</button>
+            </div>
+
+            <!-- Tree View -->
+            <div id="treeView" class="view-content active">
+                <div class="tree-legend">
+                    <div class="legend-item">
+                        <div class="legend-circle valid"></div>
+                        <span>Valid</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-circle invalid"></div>
+                        <span>Invalid</span>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-circle invalid"></div>
-                    <span>Invalid</span>
+                <div id="treeContainer" class="tree-container">
+                    <div class="tree-controls">
+                        <button onclick="zoomIn()">+</button>
+                        <button onclick="zoomOut()">−</button>
+                        <button onclick="resetZoom()">⟲</button>
+                    </div>
+                    <svg id="tree-svg"></svg>
+                    <div class="d3-tooltip" id="tooltip"></div>
                 </div>
             </div>
-            <div id="treeContainer" class="tree-container">
-                <div class="tree-controls">
-                    <button onclick="zoomIn()">+</button>
-                    <button onclick="zoomOut()">−</button>
-                    <button onclick="resetZoom()">⟲</button>
+
+            <!-- List View -->
+            <div id="listView" class="view-content">
+                <div class="list-container">
+                    <div class="list-header">
+                        <span>#</span>
+                        <span>Route</span>
+                        <span>Depth</span>
+                        <span>Status</span>
+                        <span>Time</span>
+                    </div>
+                    <div id="listBody">
+                        <div class="list-empty">Start crawling to see results</div>
+                    </div>
                 </div>
-                <svg id="tree-svg"></svg>
-                <div class="d3-tooltip" id="tooltip"></div>
             </div>
         </section>
 
@@ -664,11 +816,28 @@
         let validRoutes = [];
         let invalidRoutes = [];
         let treeNodes = [];
+        let crawlStartTime = null;
         
         // D3 Tree variables
         let svg, g, zoom, tree, root;
         let treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
         let nodeMap = new Map();
+
+        // Switch between views
+        function switchView(view) {
+            document.querySelectorAll('.view-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.view-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.view-tab[onclick="switchView('${view}')"]`).classList.add('active');
+            document.getElementById(view + 'View').classList.add('active');
+            
+            if (view === 'tree' && treeNodes.length > 0) {
+                setTimeout(() => {
+                    initTree();
+                    updateTree();
+                }, 100);
+            }
+        }
 
         // Initialize D3 Tree
         function initTree() {
@@ -676,14 +845,12 @@
             const width = container.clientWidth;
             const height = 500;
 
-            // Clear previous
             d3.select('#tree-svg').selectAll('*').remove();
 
             svg = d3.select('#tree-svg')
                 .attr('width', width)
                 .attr('height', height);
 
-            // Create zoom behavior
             zoom = d3.zoom()
                 .scaleExtent([0.3, 3])
                 .on('zoom', (event) => {
@@ -695,7 +862,6 @@
             g = svg.append('g')
                 .attr('transform', `translate(${width / 2}, 50)`);
 
-            // Reset tree data
             treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
             nodeMap.clear();
         }
@@ -707,10 +873,8 @@
             const width = container.clientWidth;
             const height = 500;
 
-            // Build hierarchy from flat nodes
             buildHierarchy();
 
-            // Create tree layout
             const treeLayout = d3.tree()
                 .size([width - 100, height - 150])
                 .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
@@ -718,11 +882,9 @@
             root = d3.hierarchy(treeDataHierarchy);
             treeLayout(root);
 
-            // Clear and redraw
             g.selectAll('*').remove();
 
-            // Draw links
-            const links = g.selectAll('.link')
+            g.selectAll('.link')
                 .data(root.links())
                 .enter()
                 .append('path')
@@ -731,7 +893,6 @@
                     .x(d => d.x - width / 2 + 50)
                     .y(d => d.y));
 
-            // Draw nodes
             const nodes = g.selectAll('.node')
                 .data(root.descendants())
                 .enter()
@@ -739,7 +900,6 @@
                 .attr('class', 'node')
                 .attr('transform', d => `translate(${d.x - width / 2 + 50}, ${d.y})`);
 
-            // Node circles
             nodes.append('circle')
                 .attr('r', 16)
                 .attr('fill', d => d.data.isValid ? '#ffffff' : 'transparent')
@@ -748,7 +908,6 @@
                 .on('mouseover', showTooltip)
                 .on('mouseout', hideTooltip);
 
-            // Node text (inside circle)
             nodes.append('text')
                 .attr('dy', 4)
                 .attr('text-anchor', 'middle')
@@ -757,7 +916,6 @@
                 .attr('font-size', '10px')
                 .text(d => d.data.isValid ? 'V' : 'X');
 
-            // Labels below nodes
             nodes.append('text')
                 .attr('dy', 35)
                 .attr('text-anchor', 'middle')
@@ -766,7 +924,6 @@
                     return name.length > 15 ? '...' + name.slice(-12) : name;
                 });
 
-            // Depth labels
             nodes.append('text')
                 .attr('dy', 50)
                 .attr('text-anchor', 'middle')
@@ -776,11 +933,9 @@
         }
 
         function buildHierarchy() {
-            // Reset
             treeDataHierarchy = null;
             nodeMap.clear();
 
-            // Sort by depth
             const sortedNodes = [...treeNodes].sort((a, b) => a.depth - b.depth);
 
             for (const node of sortedNodes) {
@@ -797,13 +952,11 @@
                 if (node.depth === 0) {
                     treeDataHierarchy = treeNode;
                 } else {
-                    // Find parent (closest match by path)
                     const parentPath = findParentPath(node.route);
                     const parent = nodeMap.get(parentPath);
                     if (parent) {
                         parent.children.push(treeNode);
                     } else if (treeDataHierarchy) {
-                        // Fallback: attach to root
                         treeDataHierarchy.children.push(treeNode);
                     }
                 }
@@ -822,7 +975,6 @@
         }
 
         function findParentPath(route) {
-            // Try to find parent by removing last segment
             const parts = route.split('/').filter(p => p);
             while (parts.length > 0) {
                 parts.pop();
@@ -862,6 +1014,29 @@
             svg.transition().call(zoom.transform, d3.zoomIdentity.translate(width / 2, 50));
         }
 
+        // Update list view
+        function updateListView(event) {
+            const listBody = document.getElementById('listBody');
+            
+            if (treeNodes.length === 1) {
+                listBody.innerHTML = '';
+            }
+            
+            const elapsed = ((Date.now() - crawlStartTime) / 1000).toFixed(2);
+            
+            const row = document.createElement('div');
+            row.className = 'list-row';
+            row.innerHTML = `
+                <span class="list-status ${event.is_valid ? 'valid' : 'invalid'}">${event.is_valid ? 'V' : 'X'}</span>
+                <span class="list-route" title="${event.url}">${event.route}</span>
+                <span class="list-depth">${event.depth}</span>
+                <span class="list-queue">${event.queue_size}</span>
+                <span class="list-time">${elapsed}s</span>
+            `;
+            listBody.appendChild(row);
+            listBody.scrollTop = listBody.scrollHeight;
+        }
+
         async function startCrawl() {
             const url = document.getElementById('urlInput').value.trim();
             if (!url) {
@@ -872,8 +1047,11 @@
             validRoutes = [];
             invalidRoutes = [];
             treeNodes = [];
+            crawlStartTime = Date.now();
+            
             document.getElementById('validList').innerHTML = '';
             document.getElementById('invalidList').innerHTML = '';
+            document.getElementById('listBody').innerHTML = '<div class="list-empty">Starting...</div>';
             
             document.getElementById('progressSection').classList.add('active');
             document.getElementById('treeCard').classList.add('active');
@@ -892,7 +1070,6 @@
             document.getElementById('statusText').className = 'status-text running';
             document.getElementById('statusText').textContent = 'Crawling';
 
-            // Initialize tree
             initTree();
 
             abortController = new AbortController();
@@ -958,10 +1135,12 @@
                     document.getElementById('queueCount').textContent = event.queue_size;
                     document.getElementById('currentUrl').textContent = event.route;
 
-                    // Add to tree
                     treeNodes.push(event);
                     document.getElementById('nodeCount').textContent = `${treeNodes.length} nodes`;
+                    
+                    // Update both views
                     updateTree();
+                    updateListView(event);
 
                     if (event.is_valid) {
                         validRoutes.push(event);
@@ -1014,9 +1193,8 @@
             document.getElementById('validationStatus').textContent = validation.is_valid ? 'Valid' : 'Invalid';
         }
 
-        // Initialize on load
         window.addEventListener('resize', () => {
-            if (treeNodes.length > 0) {
+            if (treeNodes.length > 0 && document.getElementById('treeView').classList.contains('active')) {
                 initTree();
                 updateTree();
             }
