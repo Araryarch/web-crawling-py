@@ -89,9 +89,9 @@ class DFSWebCrawler(ICrawler):
             
             is_valid = html is not None
             
-            # Add new links to stack first (before emitting event)
-            new_links_added = 0
-            if is_valid:
+            # Only extract links if we haven't reached max_pages yet
+            remaining_queue = 0
+            if is_valid and pages_crawled < self.config.max_pages:
                 links = self.link_extractor.extract_links(html, current_url)
                 
                 for link in links:
@@ -104,12 +104,11 @@ class DFSWebCrawler(ICrawler):
                         continue
                     
                     stack.append((normalized_link, current_depth + 1, current_url))
-                    new_links_added += 1
-            
-            # Calculate actual remaining queue (filter already visited/processed)
-            remaining_queue = sum(
-                1 for url, depth, _ in stack 
-                if url not in visited_urls and depth <= self.config.max_depth
+                
+                # Calculate actual remaining queue
+                remaining_queue = sum(
+                    1 for url, depth, _ in stack 
+                    if url not in visited_urls and depth <= self.config.max_depth
             )
             
             # Emit page event with accurate queue size
@@ -143,6 +142,10 @@ class DFSWebCrawler(ICrawler):
                 valid_routes_set.add(route)
             else:
                 invalid_routes_set.add(route)
+            
+            # Check if max pages reached - break immediately without delay
+            if pages_crawled >= self.config.max_pages:
+                break
             
             time.sleep(self.config.delay)
         
