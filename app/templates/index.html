@@ -676,6 +676,12 @@
                 <button id="crawlBtn" class="btn btn-primary" onclick="startCrawl()">
                     Start Crawl
                 </button>
+                <button id="pauseBtn" class="btn btn-secondary" onclick="pauseCrawl()" style="display: none;">
+                    Pause
+                </button>
+                <button id="resumeBtn" class="btn btn-secondary" onclick="resumeCrawl()" style="display: none;">
+                    Resume
+                </button>
                 <button id="stopBtn" class="btn btn-secondary" onclick="stopCrawl()" style="display: none;">
                     Stop
                 </button>
@@ -832,6 +838,8 @@
         let invalidRoutes = [];
         let treeNodes = [];
         let crawlStartTime = null;
+        let isPaused = false;
+        let eventBuffer = [];
         
         // D3 Tree variables
         let svg, g, zoom, tree, root;
@@ -1229,9 +1237,18 @@
             document.getElementById('statusText').className = 'status-text running';
             document.getElementById('statusText').textContent = 'Crawling';
 
+            // Reset pause state
+            isPaused = false;
+            eventBuffer = [];
+
             initTree();
 
             abortController = new AbortController();
+
+            // Update buttons
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('resumeBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
 
             try {
                 const response = await fetch('/crawl/stream', {
@@ -1255,7 +1272,12 @@
                         if (line.startsWith('data: ')) {
                             try {
                                 const event = JSON.parse(line.slice(6));
-                                handleEvent(event);
+                                // Buffer events if paused, otherwise process immediately
+                                if (isPaused) {
+                                    eventBuffer.push(event);
+                                } else {
+                                    handleEvent(event);
+                                }
                             } catch (e) {
                                 console.error('Parse error:', e);
                             }
@@ -1272,6 +1294,8 @@
                 }
             } finally {
                 document.getElementById('crawlBtn').disabled = false;
+                document.getElementById('pauseBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'none';
                 document.getElementById('stopBtn').style.display = 'none';
             }
         }
@@ -1279,6 +1303,32 @@
         function stopCrawl() {
             if (abortController) {
                 abortController.abort();
+            }
+            isPaused = false;
+            eventBuffer = [];
+        }
+
+        function pauseCrawl() {
+            isPaused = true;
+            document.getElementById('pauseBtn').style.display = 'none';
+            document.getElementById('resumeBtn').style.display = 'inline-block';
+            document.getElementById('statusText').textContent = 'Paused';
+            document.getElementById('statusText').className = 'status-text';
+        }
+
+        function resumeCrawl() {
+            isPaused = false;
+            document.getElementById('pauseBtn').style.display = 'inline-block';
+            document.getElementById('resumeBtn').style.display = 'none';
+            document.getElementById('statusText').textContent = 'Crawling';
+            document.getElementById('statusText').className = 'status-text running';
+
+            // Process buffered events
+            const bufferedEvents = [...eventBuffer];
+            eventBuffer = [];
+            
+            for (const event of bufferedEvents) {
+                handleEvent(event);
             }
         }
 
