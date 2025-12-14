@@ -1004,12 +1004,18 @@
         let isPaused = false;
         let eventBuffer = [];
         
+        // Performance optimization
+        let lastTreeUpdate = 0;
+        let pendingTreeUpdate = false;
+        const TREE_UPDATE_INTERVAL = 500; // ms
+        const MAX_TERMINAL_LINES = 100;
+        
         // D3 Tree variables
         let svg, g, zoom, tree, root;
         let treeDataHierarchy = { name: '/', url: '', isValid: true, depth: 0, children: [] };
         let nodeMap = new Map();
 
-        // Terminal log function
+        // Terminal log function with line limit
         function terminalLog(message, type = 'default') {
             const terminal = document.getElementById('terminalLog');
             const time = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -1022,6 +1028,12 @@
                 <span class="terminal-time">${time}</span>
             `;
             terminal.appendChild(line);
+            
+            // Limit terminal lines for performance
+            while (terminal.children.length > MAX_TERMINAL_LINES) {
+                terminal.removeChild(terminal.firstChild);
+            }
+            
             terminal.scrollTop = terminal.scrollHeight;
         }
 
@@ -1561,7 +1573,7 @@
                     document.getElementById('progressBar').style.width = `${event.progress}%`;
                     document.getElementById('crawledCount').textContent = event.pages_crawled;
 
-                    // Terminal log for each page
+                    // Terminal log for each page (already limited by MAX_TERMINAL_LINES)
                     if (event.is_valid) {
                         terminalLog(`[${event.pages_crawled}] FOUND ${event.route} (depth:${event.depth})`, 'success');
                     } else {
@@ -1571,18 +1583,36 @@
                     treeNodes.push(event);
                     document.getElementById('nodeCount').textContent = `${treeNodes.length} nodes`;
                     
-                    // Update both views
-                    updateTree();
+                    // Throttle tree updates for performance
+                    const now = Date.now();
+                    if (now - lastTreeUpdate > TREE_UPDATE_INTERVAL) {
+                        lastTreeUpdate = now;
+                        updateTree();
+                    } else if (!pendingTreeUpdate) {
+                        pendingTreeUpdate = true;
+                        setTimeout(() => {
+                            pendingTreeUpdate = false;
+                            lastTreeUpdate = Date.now();
+                            updateTree();
+                        }, TREE_UPDATE_INTERVAL);
+                    }
+                    
+                    // Update list view
                     updateListView(event);
 
                     if (event.is_valid) {
                         validRoutes.push(event);
                         document.getElementById('validCount').textContent = validRoutes.length;
-                        addRouteItem('validList', event, true);
+                        // Only add to route list if not too many (performance)
+                        if (validRoutes.length <= 100) {
+                            addRouteItem('validList', event, true);
+                        }
                     } else {
                         invalidRoutes.push(event);
                         document.getElementById('invalidCount').textContent = invalidRoutes.length;
-                        addRouteItem('invalidList', event, false);
+                        if (invalidRoutes.length <= 100) {
+                            addRouteItem('invalidList', event, false);
+                        }
                     }
                     break;
 
@@ -1602,6 +1632,10 @@
                     terminalLog(`Total: ${event.result.pages_crawled} pages crawled`, 'info');
                     terminalLog(`Valid: ${event.result.found_routes.length} | Invalid: ${event.result.invalid_routes.length}`, 'highlight');
                     terminalLog('Process terminated.', 'warning');
+                    
+                    // Force final tree update
+                    updateTree();
+                    
                     handleComplete(event.result);
                     break;
             }
