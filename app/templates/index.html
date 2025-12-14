@@ -928,9 +928,9 @@
             const xOffset = padding / 2;
             const yOffset = 50;
 
-            // Draw links
+            // Draw links (skip links from/to virtual root)
             g.selectAll('.link')
-                .data(root.links())
+                .data(root.links().filter(l => !l.source.data.isVirtualRoot))
                 .enter()
                 .append('path')
                 .attr('class', 'link')
@@ -938,9 +938,9 @@
                     .x(d => d.x + xOffset)
                     .y(d => d.y + yOffset));
 
-            // Draw nodes
+            // Draw nodes (skip virtual root)
             const nodes = g.selectAll('.node')
-                .data(root.descendants())
+                .data(root.descendants().filter(d => !d.data.isVirtualRoot))
                 .enter()
                 .append('g')
                 .attr('class', 'node')
@@ -1021,63 +1021,89 @@
             treeDataHierarchy = null;
             nodeMap.clear();
 
+            if (treeNodes.length === 0) return;
+
+            // Create a virtual root to hold everything
+            const virtualRoot = {
+                name: 'root',
+                url: '',
+                isValid: true,
+                depth: -1,
+                children: [],
+                isVirtualRoot: true
+            };
+
             // Sort by depth first, then by route length
             const sortedNodes = [...treeNodes].sort((a, b) => {
                 if (a.depth !== b.depth) return a.depth - b.depth;
                 return a.route.length - b.route.length;
             });
 
-            if (sortedNodes.length === 0) return;
-
-            // First pass: create all nodes
+            // First pass: create all tree nodes
+            const allTreeNodes = [];
             for (const node of sortedNodes) {
                 const treeNode = {
                     name: node.route,
                     url: node.url,
                     isValid: node.is_valid,
                     depth: node.depth,
-                    children: []
+                    children: [],
+                    _added: false
                 };
                 
-                // Normalize route for consistent lookup
                 const normalizedRoute = normalizeRoute(node.route);
                 nodeMap.set(normalizedRoute, treeNode);
+                allTreeNodes.push({ node, treeNode, normalizedRoute });
             }
 
             // Second pass: build hierarchy
-            for (const node of sortedNodes) {
-                const normalizedRoute = normalizeRoute(node.route);
-                const treeNode = nodeMap.get(normalizedRoute);
-
-                if (node.depth === 0 || normalizedRoute === '/') {
-                    // This is root
-                    if (!treeDataHierarchy) {
-                        treeDataHierarchy = treeNode;
-                    }
-                } else {
-                    // Find parent
-                    const parentPath = findParentPath(normalizedRoute);
-                    const parent = nodeMap.get(parentPath);
-                    
-                    if (parent && parent !== treeNode) {
-                        // Avoid duplicate children
-                        if (!parent.children.find(c => c.name === treeNode.name)) {
-                            parent.children.push(treeNode);
-                        }
-                    } else if (treeDataHierarchy && treeDataHierarchy !== treeNode) {
-                        // Fallback to root
-                        if (!treeDataHierarchy.children.find(c => c.name === treeNode.name)) {
-                            treeDataHierarchy.children.push(treeNode);
-                        }
+            for (const { node, treeNode, normalizedRoute } of allTreeNodes) {
+                // Find parent
+                const parentPath = findParentPath(normalizedRoute);
+                const parent = nodeMap.get(parentPath);
+                
+                if (parent && parent !== treeNode) {
+                    // Found a parent, add as child
+                    if (!parent.children.find(c => c.name === treeNode.name)) {
+                        parent.children.push(treeNode);
+                        treeNode._added = true;
                     }
                 }
             }
 
-            // If no root was found, create one from first node
-            if (!treeDataHierarchy && sortedNodes.length > 0) {
-                const first = sortedNodes[0];
-                treeDataHierarchy = nodeMap.get(normalizeRoute(first.route));
+            // Third pass: find the actual root(s) - nodes that weren't added as children
+            const rootNodes = allTreeNodes
+                .filter(({ treeNode }) => !treeNode._added)
+                .map(({ treeNode }) => treeNode);
+
+            // If we have exactly one root, use it
+            if (rootNodes.length === 1) {
+                treeDataHierarchy = rootNodes[0];
+            } else if (rootNodes.length > 1) {
+                // Multiple roots - use virtual root
+                virtualRoot.children = rootNodes;
+                treeDataHierarchy = virtualRoot;
+            } else if (allTreeNodes.length > 0) {
+                // Fallback: use first node as root
+                treeDataHierarchy = allTreeNodes[0].treeNode;
             }
+
+            // Cleanup: remove _added flag
+            for (const { treeNode } of allTreeNodes) {
+                delete treeNode._added;
+            }
+
+            // Debug: log how many nodes are in tree
+            console.log(`Tree built: ${treeNodes.length} input nodes, ${countTreeNodes(treeDataHierarchy)} in tree`);
+        }
+
+        function countTreeNodes(node) {
+            if (!node) return 0;
+            let count = node.isVirtualRoot ? 0 : 1;
+            for (const child of node.children) {
+                count += countTreeNodes(child);
+            }
+            return count;
         }
 
         function normalizeRoute(route) {
