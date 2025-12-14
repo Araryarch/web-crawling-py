@@ -162,10 +162,21 @@ class DFSWebCrawler(ICrawler):
                 f"pages_crawled={pages_crawled}"
             )
         
+        # Determine stop reason
+        if pages_crawled >= self.config.max_pages:
+            stop_reason = 'max_pages_reached'
+        elif not stack:
+            stop_reason = 'queue_empty'
+        else:
+            stop_reason = 'unknown'
+        
+        result.stop_reason = stop_reason
+        
         # Emit complete event
         yield {
             'type': 'complete',
-            'result': result
+            'result': result,
+            'stop_reason': stop_reason
         }
     
     def _get_user_agent(self) -> str:

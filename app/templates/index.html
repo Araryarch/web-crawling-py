@@ -1566,6 +1566,15 @@
                 case 'complete':
                     const elapsed = ((Date.now() - crawlStartTime) / 1000).toFixed(2);
                     terminalLog('─'.repeat(40), 'default');
+                    
+                    // Show stop reason
+                    const stopReason = event.result.stop_reason || event.stop_reason;
+                    if (stopReason === 'max_pages_reached') {
+                        terminalLog(`Max pages limit reached (${event.result.pages_crawled} pages)`, 'warning');
+                    } else if (stopReason === 'queue_empty') {
+                        terminalLog('All reachable pages crawled.', 'info');
+                    }
+                    
                     terminalLog(`Crawl completed in ${elapsed}s`, 'success');
                     terminalLog(`Total: ${event.result.pages_crawled} pages crawled`, 'info');
                     terminalLog(`Valid: ${event.result.found_routes.length} | Invalid: ${event.result.invalid_routes.length}`, 'highlight');

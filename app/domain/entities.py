@@ -43,6 +43,7 @@ class CrawlResult:
     max_depth_reached: int = 0
     tree: Optional[TreeNode] = None
     route_depths: Dict[str, int] = field(default_factory=dict)  # route -> depth mapping
+    stop_reason: str = 'unknown'  # 'max_pages_reached', 'queue_empty', 'unknown'
     
     def validate_page_count(self) -> bool:
         """Validasi bahwa valid + invalid = pages_crawled"""
@@ -57,6 +58,7 @@ class CrawlResult:
             'pages_crawled': self.pages_crawled,
             'max_depth_reached': self.max_depth_reached,
             'route_depths': self.route_depths,
+            'stop_reason': self.stop_reason,
             'validation': {
                 'valid_count': len(self.found_routes),
                 'invalid_count': len(self.invalid_routes),
