@@ -374,14 +374,15 @@
         .tree-container {
             background: var(--bg-secondary);
             border-radius: 6px;
-            min-height: 500px;
+            min-height: 600px;
+            max-height: 800px;
             overflow: auto;
             position: relative;
         }
 
         #tree-svg {
             width: 100%;
-            min-height: 500px;
+            min-height: 600px;
             display: block;
         }
 
@@ -631,10 +632,15 @@
             background: var(--bg-secondary);
             color: var(--text-secondary);
         }
+        /* Minimalist Scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
 
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
         }
 
         ::-webkit-scrollbar-track {
@@ -642,8 +648,16 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        ::-webkit-scrollbar-corner {
+            background: transparent;
         }
     </style>
 </head>
@@ -969,10 +983,8 @@
                 .attr('font-size', '9px')
                 .text(d => `d:${d.data.depth}`);
 
-            // Auto-fit on first render or when nodes change significantly
-            if (nodeCount <= 20) {
-                fitToScreen();
-            }
+            // Always auto-fit to show all nodes
+            setTimeout(() => fitToScreen(), 50);
         }
 
         function fitToScreen() {
@@ -1009,8 +1021,15 @@
             treeDataHierarchy = null;
             nodeMap.clear();
 
-            const sortedNodes = [...treeNodes].sort((a, b) => a.depth - b.depth);
+            // Sort by depth first, then by route length
+            const sortedNodes = [...treeNodes].sort((a, b) => {
+                if (a.depth !== b.depth) return a.depth - b.depth;
+                return a.route.length - b.route.length;
+            });
 
+            if (sortedNodes.length === 0) return;
+
+            // First pass: create all nodes
             for (const node of sortedNodes) {
                 const treeNode = {
                     name: node.route,
@@ -1019,43 +1038,85 @@
                     depth: node.depth,
                     children: []
                 };
+                
+                // Normalize route for consistent lookup
+                const normalizedRoute = normalizeRoute(node.route);
+                nodeMap.set(normalizedRoute, treeNode);
+            }
 
-                nodeMap.set(node.route, treeNode);
+            // Second pass: build hierarchy
+            for (const node of sortedNodes) {
+                const normalizedRoute = normalizeRoute(node.route);
+                const treeNode = nodeMap.get(normalizedRoute);
 
-                if (node.depth === 0) {
-                    treeDataHierarchy = treeNode;
+                if (node.depth === 0 || normalizedRoute === '/') {
+                    // This is root
+                    if (!treeDataHierarchy) {
+                        treeDataHierarchy = treeNode;
+                    }
                 } else {
-                    const parentPath = findParentPath(node.route);
+                    // Find parent
+                    const parentPath = findParentPath(normalizedRoute);
                     const parent = nodeMap.get(parentPath);
-                    if (parent) {
-                        parent.children.push(treeNode);
-                    } else if (treeDataHierarchy) {
-                        treeDataHierarchy.children.push(treeNode);
+                    
+                    if (parent && parent !== treeNode) {
+                        // Avoid duplicate children
+                        if (!parent.children.find(c => c.name === treeNode.name)) {
+                            parent.children.push(treeNode);
+                        }
+                    } else if (treeDataHierarchy && treeDataHierarchy !== treeNode) {
+                        // Fallback to root
+                        if (!treeDataHierarchy.children.find(c => c.name === treeNode.name)) {
+                            treeDataHierarchy.children.push(treeNode);
+                        }
                     }
                 }
             }
 
+            // If no root was found, create one from first node
             if (!treeDataHierarchy && sortedNodes.length > 0) {
                 const first = sortedNodes[0];
-                treeDataHierarchy = {
-                    name: first.route,
-                    url: first.url,
-                    isValid: first.is_valid,
-                    depth: first.depth,
-                    children: []
-                };
+                treeDataHierarchy = nodeMap.get(normalizeRoute(first.route));
             }
         }
 
+        function normalizeRoute(route) {
+            // Normalize route: remove trailing slash except for root
+            let normalized = route || '/';
+            if (normalized !== '/' && normalized.endsWith('/')) {
+                normalized = normalized.slice(0, -1);
+            }
+            if (!normalized.startsWith('/')) {
+                normalized = '/' + normalized;
+            }
+            return normalized;
+        }
+
         function findParentPath(route) {
-            const parts = route.split('/').filter(p => p);
+            // Remove trailing slash for processing
+            let normalizedRoute = normalizeRoute(route);
+            
+            // Split into parts
+            const parts = normalizedRoute.split('/').filter(p => p);
+            
+            // Try to find the closest existing parent
             while (parts.length > 0) {
-                parts.pop();
-                const parentPath = '/' + parts.join('/');
-                if (nodeMap.has(parentPath) || nodeMap.has(parentPath + '/')) {
-                    return nodeMap.has(parentPath) ? parentPath : parentPath + '/';
+                parts.pop(); // Remove last segment
+                
+                const parentPath = parts.length === 0 ? '/' : '/' + parts.join('/');
+                
+                // Check if this parent exists in our nodeMap
+                if (nodeMap.has(parentPath)) {
+                    return parentPath;
+                }
+                
+                // Also check with trailing slash
+                if (nodeMap.has(parentPath + '/')) {
+                    return parentPath + '/';
                 }
             }
+            
+            // Fallback to root
             return '/';
         }
 
