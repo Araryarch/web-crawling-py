@@ -116,10 +116,30 @@ def crawl_stream():
         use_case = CrawlWebsiteUseCase(container.get_crawler(), url_parser)
         use_case._validate_url(crawl_request.url)
         
+        # Create custom config from request
+        from app.domain.entities import CrawlConfig
+        custom_config = CrawlConfig(
+            max_pages=crawl_request.max_pages,
+            max_depth=crawl_request.max_depth,
+            timeout=crawl_request.timeout,
+            delay=crawl_request.delay,
+            verify_ssl=container.config.verify_ssl,
+            retry_count=container.config.retry_count,
+            retry_delay=container.config.retry_delay,
+            rotate_user_agent=container.config.rotate_user_agent
+        )
+        
+        # Create a new crawler with custom config
+        from app.infrastructure.dfs_crawler import DFSWebCrawler
+        custom_crawler = DFSWebCrawler(
+            http_client=container.get_http_client(),
+            url_parser=container.get_url_parser(),
+            link_extractor=container.get_link_extractor(),
+            config=custom_config
+        )
+        
         def generate():
-            crawler = container.get_crawler()
-            
-            for event in crawler.crawl_stream(crawl_request.url):
+            for event in custom_crawler.crawl_stream(crawl_request.url):
                 if event['type'] == 'complete':
                     # Convert CrawlResult to dict for JSON serialization
                     event = {

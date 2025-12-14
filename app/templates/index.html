@@ -1251,10 +1251,22 @@
             document.getElementById('stopBtn').style.display = 'inline-block';
 
             try {
+                // Get config values from inputs
+                const maxPages = parseInt(document.getElementById('maxPages').value) || 100;
+                const maxDepth = parseInt(document.getElementById('maxDepth').value) || 10;
+                const timeout = parseFloat(document.getElementById('timeout').value) || 10;
+                const delay = parseFloat(document.getElementById('delay').value) || 0.1;
+
                 const response = await fetch('/crawl/stream', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url: url}),
+                    body: JSON.stringify({
+                        url: url,
+                        max_pages: maxPages,
+                        max_depth: maxDepth,
+                        timeout: timeout,
+                        delay: delay
+                    }),
                     signal: abortController.signal
                 });
 

@@ -5,6 +5,10 @@ from typing import Optional
 @dataclass
 class CrawlRequest:
     url: str
+    max_pages: int = 100
+    max_depth: int = 10
+    timeout: float = 10.0
+    delay: float = 0.1
     
     @classmethod
     def from_dict(cls, data: dict) -> 'CrawlRequest':
@@ -18,7 +22,13 @@ class CrawlRequest:
         if not isinstance(url, str):
             raise ValueError("Field 'url' harus berupa string")
         
-        return cls(url=url.strip())
+        return cls(
+            url=url.strip(),
+            max_pages=int(data.get('max_pages', 100)),
+            max_depth=int(data.get('max_depth', 10)),
+            timeout=float(data.get('timeout', 10.0)),
+            delay=float(data.get('delay', 0.1))
+        )
 
 
 @dataclass
